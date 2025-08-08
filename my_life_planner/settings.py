@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import dj_database_url
 from dotenv import load_dotenv
+from django.contrib.messages import constants as messages
 
 # Load environment variables from .env file
 load_dotenv()
@@ -34,6 +35,7 @@ DEBUG = False
 ALLOWED_HOSTS = [
     '127.0.0.1',  # vs code preview
     'localhost',  # Listen for stripe webhooks
+    'hreokuapp.com'
 ]
 
 
@@ -46,16 +48,33 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.site',
+
+    # Third party apps
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'crispy_forms',
+    'crispy _bootstrap5',
+    'storages',
+
+    # Local apps
+    'accounts',
+    'diary',
+    'checkout',
+    'modules',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'alluath.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'my_life_planner.urls'
@@ -63,13 +82,18 @@ ROOT_URLCONF = 'my_life_planner.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+            os.path.join(BASE_DIR, 'templates'),
+            os.path.join(BASE_DIR, 'templates', 'allauth'),
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.media',
             ],
         },
     },
@@ -107,6 +131,55 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backeends.ModelBackend',
+    'allauthaccount.auth_backends.AthenticationBackend',
+]
+
+SITE_ID = 1
+
+# Accountsettings
+ACCOUNT_ATHENTICATION_METHOD = 'username_email'
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUTN_SIGNUP_EMAIL_ENTER_TWICE = True
+
+
+WSGI_APPLICATION = 'my_life_planner.wsgi.application'
+
+
+# Database
+if 'DATABASE_URL' in os.environ:
+    DATABASES = {
+        'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
+    }
+else:
+    DATABASES = {
+        'defualt': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR/'db.sqlite3',
+        }
+    }
+
+    # Password validation
+    AUTH_PASSWORD_VALIDATORS = [
+        {
+            'NAME':
+            'django.contrib.password_validation.UserAttibuteSimilarityValidator',
+        },
+        {
+            'NAME':
+            'django.contrib.auth.password_validation.MinimumLengthValidator',
+        },
+        {
+            'NAME':
+            'django.contrib.auth.password_validation.CommonPasswordValidator',
+        },
+        {
+            'django.contrib.auth.password_validation.NumericPasswordValidator',
+        },
+
+    ]
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
@@ -121,9 +194,74 @@ USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
+# https://docs.djangoproject.com/en/5.2/howto/static-files
 
 STATIC_URL = 'static/'
+STATICFILES_DIR = (os.path.join(BASE_DIR, 'static'), )
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+
+# Media files
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
+# AWS S3 settings for production
+
+if not DEBUG:
+
+    # AWS settings
+    AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'eu-west-1')
+    AWS_ACCESS_KEY_ = os.environ.get('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+    AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.ammazonaws.com'
+
+# Static files
+STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+STATICFILES_LOCATION = 'static'
+
+
+# Media files
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+MEDIAFILES_LOCATION = 'media'
+
+
+# Stripe
+STRIPE_CURRENCY = 'usd'
+STRIPE_PUBLIC_KEY = os.environ.get('STRIPE_PUBLIC_KEY', '')
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
+STRIPE_WH_SECRET = os.environ.get('STRIPE_WH_SECRET', '')
+
+
+# Emailconfiguration
+if DEBUG:
+    EMAIL_BACKEND = 'django.cor.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.cor.mail.backends.console.EmailBackend'
+    ENAIL_USE_TLS = True
+    EMAIL_PORT = 587
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+    DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER')
+
+
+# Crispy Forms
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+
+# Messages
+MESSAGES_TAGS = {
+    messages.DEBUG: 'alert-info',
+    messages.INFO: 'alert-info',
+    messages.SUCCESS: 'alert-success',
+    messages.WARNING: 'alert-warning',
+    messages.ERROR: 'alert_danger',
+}
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
